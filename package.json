@@ -5,10 +5,11 @@
   "main": "electron/main.js",
   "scripts": {
     "start": "electron .",
-    "dev": "concurrently \"NODE_ENV=development vite\" \"wait-on http://localhost:5173 && NODE_ENV=development electron .\"",
+    "dev": "vite",
     "build": "vite build",
-    "dist": "vite build && electron-builder",
-    "preview": "vite preview"
+     "preview": "vite preview",
+    "predeploy": "npm run build",
+    "deploy": "gh-pages -d dist"
   },
   "dependencies": {
     "react": "^18.2.0",
@@ -19,16 +20,30 @@
     "concurrently": "^8.0.0",
     "electron": "^28.0.0",
     "electron-builder": "^24.0.0",
+    "gh-pages": "^6.3.0",
     "vite": "^5.0.0",
     "wait-on": "^7.0.0"
   },
   "build": {
     "appId": "com.yourname.mybatis-converter",
     "productName": "MyBatis Converter",
-    "files": ["dist/**/*", "electron/**/*"],
-    "directories": { "output": "release" },
-    "mac": { "target": "dmg", "icon": "assets/icon.icns" },
-    "win": { "target": "nsis", "icon": "assets/icon.ico" },
-    "linux": { "target": "AppImage" }
+    "files": [
+      "dist/**/*",
+      "electron/**/*"
+    ],
+    "directories": {
+      "output": "release"
+    },
+    "mac": {
+      "target": "dmg",
+      "icon": "assets/icon.icns"
+    },
+    "win": {
+      "target": "nsis",
+      "icon": "assets/icon.ico"
+    },
+    "linux": {
+      "target": "AppImage"
+    }
   }
 }
