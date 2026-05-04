@@ -142,7 +142,7 @@ export default function Converter() {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => { if ((e.ctrlKey || e.metaKey) && e.key === "Enter") convert(); }}
-              placeholder={"粘贴 MyBatis Builder 代码...\n\n支持：\n• SELECT / FROM / WHERE\n• LEFT_OUTER_JOIN / INNER_JOIN\n• ORDER_BY / GROUP_BY / HAVING\n• LIMIT / OFFSET\n• 常量自动转占位符\n• #{param} 保留原样\n\n⌘ + Enter 快捷转换"}
+              placeholder={"粘贴 MyBatis Java SQL Builder 代码...\n\n支持：\n• SELECT / FROM / WHERE\n• LEFT_OUTER_JOIN / INNER_JOIN\n• ORDER_BY / GROUP_BY / HAVING\n• LIMIT / OFFSET\n• 常量自动转占位符\n• #{param} 保留原样\n\n不支持：\n• XML 文件\n• Java 的 if/else 逻辑\n\n⌘ + Enter 快捷转换"}
               style={{
                 flex: 1, resize: "none", border: "none", outline: "none",
                 background: "#0a0a0a", color: "#e0e0e0",

@@ -15,56 +15,45 @@
  */
 function evalJavaStringExpr(expr) {
   // Tokenise by + that is not inside quotes
-  const tokens = splitByPlus(expr.trim());
-  return tokens
-    .map((tok) => tok.trim())
-    .map((tok) => {
-      // Quoted string literal
-      if ((tok.startsWith('"') && tok.endsWith('"')) ||
-          (tok.startsWith("'") && tok.endsWith("'"))) {
-        return tok.slice(1, -1);
-      }
-      // Bare integer / float literal
-      if (/^-?\d+(\.\d+)?$/.test(tok)) return tok;
-      // Java constant reference → placeholder
-      if (/^[A-Za-z_$][A-Za-z0-9_$.]*$/.test(tok)) {
-        return toPlaceholder(tok);
-      }
-      // Fallback: return as-is (already trimmed inner content)
-      return tok;
-    })
-    .join("");
-}
+  const tokens = splitByDelimiter(expr.trim(), "+").map((t) => t.trim());
+  const resultParts = [];
+  let placeholderGroup = [];
 
-/**
- * Split a string by top-level '+' (not inside quotes or parens).
- */
-function splitByPlus(str) {
-  const parts = [];
-  let depth = 0;
-  let inSingle = false;
-  let inDouble = false;
-  let cur = "";
+  const flushGroup = () => {
+    if (placeholderGroup.length === 0) return;
+    const placeholder = toPlaceholder(placeholderGroup.join("_"));
+    const lastPart = resultParts.length > 0 ? resultParts[resultParts.length - 1] : null;
 
-  for (let i = 0; i < str.length; i++) {
-    const ch = str[i];
-    const prev = str[i - 1];
-
-    if (ch === '"' && !inSingle && prev !== "\\") inDouble = !inDouble;
-    else if (ch === "'" && !inDouble && prev !== "\\") inSingle = !inSingle;
-    else if (!inDouble && !inSingle) {
-      if (ch === "(" || ch === "[") depth++;
-      else if (ch === ")" || ch === "]") depth--;
-      else if (ch === "+" && depth === 0) {
-        parts.push(cur);
-        cur = "";
-        continue;
-      }
+    // Check if the previous part was a string literal ending in a quote
+    if (lastPart && typeof lastPart === 'string' && (lastPart.endsWith("'") || lastPart.endsWith('"'))) {
+      // Strip the quote from the previous part
+      resultParts[resultParts.length - 1] = lastPart.slice(0, -1);
+      resultParts.push(placeholder);
+    } else {
+      resultParts.push(placeholder);
     }
-    cur += ch;
+    placeholderGroup = [];
+  };
+
+  for (const tok of tokens) {
+    if (/^[A-Za-z_$][A-Za-z0-9_$.]*$/.test(tok)) {
+      placeholderGroup.push(tok);
+    } else if ((tok.startsWith('"') && tok.endsWith('"')) || (tok.startsWith("'") && tok.endsWith("'"))) {
+      flushGroup();
+      let literal = tok.slice(1, -1);
+      // If the last part was a placeholder, check if this literal starts with a quote
+      const lastPart = resultParts[resultParts.length - 1];
+      if (lastPart && lastPart.startsWith(':') && (literal.startsWith("'") || literal.startsWith('"'))) {
+        literal = literal.slice(1);
+      }
+      resultParts.push(literal);
+    } else {
+      flushGroup();
+      resultParts.push(tok); // For bare numbers or other expressions
+    }
   }
-  if (cur.trim()) parts.push(cur);
-  return parts;
+  flushGroup();
+  return resultParts.join("");
 }
 
 /**
@@ -95,33 +84,41 @@ function toPlaceholder(ref) {
  */
 function extractCalls(source) {
   const calls = [];
-  // Only match method calls that start at a statement boundary
-  // (beginning of line, after semicolon, or start of file)
-  const methodPattern = /(?:^|;|\n)\s*(SELECT|FROM|LEFT_OUTER_JOIN|LEFT_JOIN|INNER_JOIN|JOIN|RIGHT_OUTER_JOIN|RIGHT_JOIN|WHERE|AND|OR|ORDER_BY|GROUP_BY|HAVING|LIMIT|OFFSET|SET|INTO|VALUES|UPDATE|DELETE_FROM)\s*\(/gim;
+  // Regex to find the start of a method call. We don't use the global flag here,
+  // as we will control the search index manually.
+  const methodPattern = /(?:^|;|\n|\.)\s*(SELECT|FROM|LEFT_OUTER_JOIN|LEFT_JOIN|INNER_JOIN|JOIN|RIGHT_OUTER_JOIN|RIGHT_JOIN|WHERE|AND|OR|ORDER_BY|GROUP_BY|HAVING|LIMIT|OFFSET|SET|INTO|VALUES|UPDATE|DELETE_FROM)\s*\(/im;
 
-  let match;
-  while ((match = methodPattern.exec(source)) !== null) {
+  let searchIndex = 0;
+  while (searchIndex < source.length) {
+    const searchSlice = source.substring(searchIndex);
+    const match = searchSlice.match(methodPattern);
+
+    if (!match) break; // No more methods found
+
     const method = match[1].toUpperCase();
-    // Find the opening paren position
-    const openParen = match.index + match[0].lastIndexOf("(");
-    // Walk forward to find matching close paren
+    // Adjust index to be relative to the full source string
+    const openParenIndex = searchIndex + match.index + match[0].length - 1;
+
     let depth = 1;
-    let i = openParen + 1;
-    let inDouble = false;
-    let inSingle = false;
-    while (i < source.length && depth > 0) {
-      const ch = source[i];
-      const prev = source[i - 1];
-      if (ch === '"' && !inSingle && prev !== "\\") inDouble = !inDouble;
-      else if (ch === "'" && !inDouble && prev !== "\\") inSingle = !inSingle;
-      else if (!inDouble && !inSingle) {
-        if (ch === "(") depth++;
-        else if (ch === ")") depth--;
-      }
-      i++;
+    let inDoubleQuote = false;
+    let inSingleQuote = false;
+
+    let i = openParenIndex + 1;
+    for (; i < source.length; i++) {
+      const char = source[i];
+      const prevChar = source[i - 1];
+
+      if (char === '"' && !inSingleQuote && prevChar !== '\\') inDoubleQuote = !inDoubleQuote;
+      else if (char === "'" && !inDoubleQuote && prevChar !== '\\') inSingleQuote = !inSingleQuote;
+      else if (!inSingleQuote && !inDoubleQuote && char === '(') depth++;
+      else if (!inSingleQuote && !inDoubleQuote && char === ')') depth--;
+
+      if (depth === 0) break;
     }
-    const content = source.slice(openParen + 1, i - 1).trim();
-    calls.push({ method, content, start: match.index, end: i });
+
+    const content = source.substring(openParenIndex + 1, i).trim();
+    calls.push({ method, content });
+    searchIndex = i + 1; // Start next search after the current call
   }
   return calls;
 }
@@ -169,23 +166,32 @@ function buildJoins(calls) {
 
 function buildWhere(calls) {
   const conditions = [];
-  for (const { method, content } of calls) {
-    if (!["WHERE", "AND", "OR"].includes(method)) continue;
+  let useOr = false; // State to track if the next condition should be OR
+
+  const relevantCalls = calls.filter(({ method }) => ["WHERE", "AND", "OR"].includes(method));
+
+  for (const { method, content } of relevantCalls) {
+    if (method === "OR") {
+      // If OR() is called, set the flag for the next condition.
+      // Only set if there are already conditions to join with.
+      if (conditions.length > 0) {
+        useOr = true;
+      }
+      continue;
+    }
+
     const val = evalJavaStringExpr(content).trim();
-    // Clean up extra whitespace within the condition
+    if (!val) continue; // Ignore empty WHERE("") or AND("")
+
     const cleaned = val.replace(/\s+/g, " ").trim();
-    conditions.push(cleaned);
+    const joiner = conditions.length === 0 ? "" : useOr ? "OR " : "AND ";
+    conditions.push(joiner + formatCondition(cleaned));
+    useOr = false; // Reset the flag after using it
   }
+
   if (conditions.length === 0) return "";
-  if (conditions.length === 1) return "WHERE " + formatCondition(conditions[0]);
   const indent = "    ";
-  return (
-    "WHERE\n" +
-    indent +
-    conditions
-      .map((c, i) => (i === 0 ? formatCondition(c) : "AND " + formatCondition(c)))
-      .join("\n" + indent)
-  );
+  return "WHERE\n" + indent + conditions.join("\n" + indent);
 }
 
 function buildOrderBy(calls) {
@@ -282,37 +288,7 @@ function splitTopLevelCommas(str) {
 
 /** Split by top-level OR keyword (not inside parens or quotes) */
 function splitTopLevelOr(str) {
-  // Tokenise by whitespace-bounded OR
-  const parts = [];
-  let depth = 0;
-  let inDouble = false;
-  let inSingle = false;
-  let cur = "";
-  const tokens = str.split(/\b(OR)\b/i);
-  // Reconstruct splitting only on top-level OR
-  let buf = "";
-  for (let i = 0; i < str.length; ) {
-    const ch = str[i];
-    const prev = str[i - 1];
-    if (ch === '"' && !inSingle && prev !== "\\") inDouble = !inDouble;
-    else if (ch === "'" && !inDouble && prev !== "\\") inSingle = !inSingle;
-    else if (!inDouble && !inSingle) {
-      if (ch === "(" || ch === "[") depth++;
-      else if (ch === ")" || ch === "]") depth--;
-      // Check for " OR " at depth 0
-      if (depth === 0 && str.slice(i).match(/^\s+OR\s+/i)) {
-        const orMatch = str.slice(i).match(/^(\s+OR\s+)/i);
-        parts.push(buf);
-        buf = "";
-        i += orMatch[1].length;
-        continue;
-      }
-    }
-    buf += ch;
-    i++;
-  }
-  if (buf.trim()) parts.push(buf);
-  return parts.length > 0 ? parts : [str];
+  return splitByDelimiter(str, /^\s+OR\s+/i);
 }
 
 function splitByDelimiter(str, delim) {
@@ -321,24 +297,39 @@ function splitByDelimiter(str, delim) {
   let inDouble = false;
   let inSingle = false;
   let cur = "";
+  const isRegex = delim instanceof RegExp;
+
   for (let i = 0; i < str.length; i++) {
     const ch = str[i];
     const prev = str[i - 1];
+
     if (ch === '"' && !inSingle && prev !== "\\") inDouble = !inDouble;
     else if (ch === "'" && !inDouble && prev !== "\\") inSingle = !inSingle;
     else if (!inDouble && !inSingle) {
       if (ch === "(" || ch === "[") depth++;
       else if (ch === ")" || ch === "]") depth--;
-      else if (ch === delim && depth === 0) {
-        parts.push(cur);
-        cur = "";
-        continue;
+
+      if (depth === 0) {
+        if (isRegex) {
+          const match = str.slice(i).match(delim);
+          if (match && match.index === 0) {
+            parts.push(cur);
+            cur = "";
+            i += match[0].length - 1;
+            continue;
+          }
+        } else if (str.slice(i, i + delim.length) === delim) {
+          parts.push(cur);
+          cur = "";
+          i += delim.length - 1;
+          continue;
+        }
       }
     }
     cur += ch;
   }
   if (cur.trim()) parts.push(cur);
-  return parts;
+  return parts.length > 0 ? parts : [str];
 }
 
 /** Remove a single layer of wrapping parens if present */
