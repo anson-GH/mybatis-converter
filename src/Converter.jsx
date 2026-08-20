@@ -392,8 +392,8 @@ export default function Converter() {
 
           {/* Mode toggle */}
           <div style={{ marginLeft: "auto", display: "flex", gap: "4px", WebkitAppRegion: "no-drag" }}>
-            <ModeBtn active={mode === "convert"} onClick={() => setMode("convert")}>🔄 转换</ModeBtn>
-            <ModeBtn active={mode === "beautify"} onClick={() => setMode("beautify")}>✨ 美化</ModeBtn>
+            <ModeBtn active={mode === "convert"} onClick={() => setMode("convert")}>🔄 Mybatis</ModeBtn>
+            <ModeBtn active={mode === "beautify"} onClick={() => setMode("beautify")}>✨ SQL beautify</ModeBtn>
           </div>
         </div>
 
@@ -445,12 +445,12 @@ export default function Converter() {
           <div style={{ display: "flex", flexDirection: "column" }}>
             <div style={{ padding: "12px 16px", background: "#0d0d0d", borderBottom: "1px solid #1a1a1a", display: "flex", gap: "8px", alignItems: "center" }}>
               <span style={{ fontSize: "12px", color: "#888", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", flex: 1 }}>
-                {mode === "beautify" ? "✨ 格式化 / 预览 SQL" : "✨ 输出"}
+                {mode === "beautify" ? "✨ 格式化 / Preview SQL" : "✨ 输出"}
               </span>
               {mode === "beautify" && (
                 <>
                   <LargeBtn onClick={beautify}>✨ 美化</LargeBtn>
-                  <LargeBtn onClick={generatePreview} variant="success">▶ 预览 SQL</LargeBtn>
+                  <LargeBtn onClick={generatePreview} variant="success">▶ Preview SQL</LargeBtn>
                 </>
               )}
               <LargeBtn onClick={copyOutput} disabled={!activeOutput} variant="success">
@@ -593,20 +593,20 @@ function ParamPanel({ params, placeholders, onParamChange }) {
 
   return (
     <div style={{ borderTop: "1px solid #1a1a1a", padding: "10px 16px", background: "#0a0a0a" }}>
-      <div style={{ fontSize: "11px", color: "#888", marginBottom: "8px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em" }}>
+      <div style={{ fontSize: "11px", color: "#ebebeb", marginBottom: "8px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em" }}>
         🔧 MyBatis 参数
       </div>
       {paramNames.length === 0 && placeholders.length === 0 ? (
-        <div style={{ fontSize: "12px", color: "#555" }}>粘贴含 #{parameterName} 的 SQL 自动生成参数输入框</div>
+        <div style={{ fontSize: "12px", color: "#ebebeb" }}>粘贴含 #{parameterName} 的 SQL 自动生成参数输入框</div>
       ) : (
         <div style={{ display: "grid", gridTemplateColumns: "minmax(140px,180px) 1fr 80px", gap: "6px 10px", alignItems: "center" }}>
           {paramNames.map((name) => {
             const p = params[name];
             return (
               <React.Fragment key={name}>
-                <div style={{ fontFamily: "monospace", fontSize: "12px", color: "#374151" }}>#{name}</div>
+                <div style={{ fontFamily: "monospace", fontSize: "12px", color: "#ebebeb" }}>#{name}</div>
                 <input
-                  type={p.type === "date" ? "date" : "text"}
+                  type={"text"}
                   value={p.value}
                   onChange={(e) => onParamChange(name, "value", e.target.value)}
                   placeholder={`输入 ${name}`}
@@ -625,7 +625,7 @@ function ParamPanel({ params, placeholders, onParamChange }) {
                 >
                   <option value="string">String</option>
                   <option value="number">Number</option>
-                  <option value="date">Date</option>
+                  {/* <option value="date">Date</option> */}
                   <option value="raw">Raw</option>
                 </select>
               </React.Fragment>
