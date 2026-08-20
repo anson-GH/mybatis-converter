@@ -20,6 +20,10 @@ npm run dev
 npm start
 ```
 
+# Deploy to web
+npm run deploy
+```
+
 The app will open a window where you can paste MyBatis Builder code, click **Convert** and get the MySQL output.
 
 ## Features
