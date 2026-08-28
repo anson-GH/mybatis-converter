@@ -374,7 +374,7 @@ export default function Converter() {
       </div>
 
       {/* ── Main ── */}
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", minHeight: 0 }}>
 
         {/* Title bar */}
         <div style={{
@@ -398,10 +398,10 @@ export default function Converter() {
         </div>
 
         {/* Editor panels */}
-        <div style={{ flex: 1, display: "grid", gridTemplateColumns: "1fr 1fr", overflow: "hidden" }}>
+        <div style={{ flex: 1, display: "grid", gridTemplateColumns: "1fr 1fr", overflow: "hidden", minHeight: 0 }}>
 
           {/* Input panel */}
-          <div style={{ display: "flex", flexDirection: "column", borderRight: "1px solid #1a1a1a" }}>
+          <div style={{ display: "flex", flexDirection: "column", borderRight: "1px solid #1a1a1a", minHeight: 0 }}>
             <div style={{ padding: "12px 16px", background: "#0d0d0d", borderBottom: "1px solid #1a1a1a", display: "flex", gap: "8px", alignItems: "center" }}>
               <span style={{ fontSize: "12px", color: "#888", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", flex: 1 }}>
                 📝 输入
@@ -436,13 +436,13 @@ export default function Converter() {
                 background: "#0a0a0a", color: "#e0e0e0",
                 fontFamily: "'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace",
                 fontSize: "12.5px", padding: "16px", lineHeight: "1.75",
-                tabSize: 4,
+                tabSize: 4, overflow: "auto",
               }}
             />
           </div>
 
           {/* Output panel */}
-          <div style={{ display: "flex", flexDirection: "column" }}>
+          <div style={{ display: "flex", flexDirection: "column", minHeight: 0 }}>
             <div style={{ padding: "12px 16px", background: "#0d0d0d", borderBottom: "1px solid #1a1a1a", display: "flex", gap: "8px", alignItems: "center" }}>
               <span style={{ fontSize: "12px", color: "#888", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", flex: 1 }}>
                 {mode === "beautify" ? "✨ 格式化 / Preview SQL" : "✨ 输出"}
